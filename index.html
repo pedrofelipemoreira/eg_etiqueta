@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Gerador 58mm com Pré-visualização</title>
+
+<!-- PDF.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+<!-- JsBarcode -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
+
+<!-- jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+    body {
+        font-family: Arial;
+        background: #f2f2f2;
+        padding: 20px;
+    }
+
+    #preview {
+        background: white;
+        margin-top: 25px;
+        padding: 10px;
+        width: 280px;  /* Simula impressora 58mm na tela */
+        border: 1px solid #aaa;
+        border-radius: 6px;
+    }
+
+    .item {
+        text-align: center;
+        margin-bottom: 25px;
+        padding-bottom: 15px;
+        border-bottom: 1px dashed #888;
+    }
+
+    .item img {
+        width: 240px;
+        display: block;
+        margin: 0 auto 5px auto;
+    }
+
+    .codigo {
+        font-size: 12px;
+        margin-bottom: 5px;
+    }
+
+    .descricao {
+        font-size: 14px;
+        margin-bottom: 8px;
+    }
+
+    .preco {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+
+    button {
+        margin-top: 20px;
+        padding: 10px 20px;
+    }
+</style>
+
+</head>
+<body>
+
+<h2>Gerador de Etiquetas 58mm com Pré-visualização</h2>
+
+<input type="file" id="arquivo" accept="application/pdf">
+
+<div id="preview"><em>Carregue um PDF para visualizar...</em></div>
+
+<button id="btnPdf" style="display:none;">Baixar PDF 58mm</button>
+
+<script>
+document.getElementById("arquivo").addEventListener("change", async function() {
+
+    const file = this.files[0];
+    if (!file) return;
+
+    const buffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument(buffer).promise;
+
+    const preview = document.getElementById("preview");
+    preview.innerHTML = "";
+    const blocosFinais = [];
+
+    const regexCodigo = /\b\d{8,14}\b/g;
+    const regexPreco  = /(R\$\s*\d[\d\.,]*)/g;
+
+    for (let pg = 1; pg <= pdf.numPages; pg++) {
+
+        const page = await pdf.getPage(pg);
+        const content = await page.getTextContent();
+        let text = content.items.map(i => i.str).join(" ");
+
+        // Regras de quebra
+        text = text.replace(regexCodigo, m => m + "\n");
+        text = text.replace(/(.*?)\s+(?=R\$)/g, (m, g1) => g1 + "\n");
+        text = text.replace(regexPreco, m => m + "\n\n");
+
+        const linhas = text.split("\n").map(l => l.trim()).filter(l => l !== "");
+
+        for (let linha of linhas) {
+
+            let bloco = { codigo: null, descricao: null, preco: null, img: null };
+
+            if (regexCodigo.test(linha)) {
+
+                bloco.codigo = linha;
+
+                // Gerar código de barras como imagem
+                const canvas = document.createElement("canvas");
+
+                if (/^\d{13}$/.test(linha)) {
+                    JsBarcode(canvas, linha, { format:"EAN13", width:2, height:60, displayValue:false });
+                } else {
+                    JsBarcode(canvas, linha, { format:"CODE128", width:2, height:60, displayValue:false });
+                }
+
+                bloco.img = canvas.toDataURL("image/png");
+            }
+            else if (linha.startsWith("R$")) {
+                bloco.preco = linha;
+            }
+            else {
+                bloco.descricao = linha;
+            }
+
+            blocosFinais.push(bloco);
+        }
+    }
+
+    window.ETIQUETAS = blocosFinais;
+
+    // ----------- PREVIEW NA TELA --------------
+    preview.innerHTML = "";
+
+    let itemDiv = null;
+
+    blocosFinais.forEach(b => {
+        if (b.codigo) {
+            itemDiv = document.createElement("div");
+            itemDiv.className = "item";
+
+            const img = document.createElement("img");
+            img.src = b.img;
+            itemDiv.appendChild(img);
+
+            const cod = document.createElement("div");
+            cod.className = "codigo";
+            cod.textContent = b.codigo;
+            itemDiv.appendChild(cod);
+
+            preview.appendChild(itemDiv);
+        }
+        else if (b.descricao) {
+            const desc = document.createElement("div");
+            desc.className = "descricao";
+            desc.textContent = b.descricao;
+            itemDiv.appendChild(desc);
+        }
+        else if (b.preco) {
+            const price = document.createElement("div");
+            price.className = "preco";
+            price.textContent = b.preco;
+            itemDiv.appendChild(price);
+        }
+    });
+
+    document.getElementById("btnPdf").style.display = "inline-block";
+});
+
+
+// -------------------- EXPORTAR PDF 58mm -------------------------
+
+document.getElementById("btnPdf").addEventListener("click", () => {
+
+    const { jsPDF } = window.jspdf;
+
+    let pdf = new jsPDF({
+        unit: "mm",
+        format: [58, 300]  // largura 58mm
+    });
+
+    let y = 8;
+    const dados = window.ETIQUETAS;
+
+    dados.forEach(b => {
+
+        // 1️⃣ CÓDIGO NUMÉRICO (MENOR)
+        if (b.codigo) {
+            pdf.setFont("helvetica","normal");
+            pdf.setFontSize(9);
+            pdf.text(b.codigo, 29, y, { align: "center" });
+            y += 2; // pequeno espaçamento
+        }
+
+        // 2️⃣ CÓDIGO DE BARRAS (CENTRALIZADO ABAIXO DO CÓDIGO)
+        if (b.img) {
+            pdf.addImage(b.img, "PNG", 4, y, 50, 14); // mais baixo e mais estreito
+            y += 18;
+        }
+
+        // 3️⃣ NOME DO PRODUTO (MÉDIO)
+        if (b.descricao) {
+            pdf.setFontSize(11);
+            pdf.setFont("helvetica", "normal");
+            const desc = pdf.splitTextToSize(b.descricao, 50);
+            pdf.text(desc, 29, y, { align: "center" });
+            y += desc.length * 5 + 4; // espaçamento menor
+        }
+
+        // 4️⃣ PREÇO (MESMO TAMANHO DO NOME + NEGRITO)
+        if (b.preco) {
+            pdf.setFontSize(11);
+            pdf.setFont("helvetica", "bold");
+            pdf.text(b.preco, 29, y, { align:"center" });
+            y += 12; // espaçamento mais curto
+        }
+
+        // Quebra de página
+        if (y > 280) {
+            pdf.addPage([58,300]);
+            y = 8;
+        }
+    });
+
+    pdf.save("etiquetas_58mm.pdf");
+});
+
+</script>
+
+</body>
+</html>
