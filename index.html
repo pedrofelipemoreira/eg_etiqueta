@@ -181,9 +181,13 @@ document.getElementById("btnPdf").addEventListener("click", () => {
 
     const { jsPDF } = window.jspdf;
 
+    // Largura total 58mm → mas vamos usar apenas 50mm de área útil
+    const margem = 8;   // margem esquerda e direita
+    const larguraUtil = 58 - (margem * 2);  // 50mm de área segura
+
     let pdf = new jsPDF({
         unit: "mm",
-        format: [58, 300]  // largura 58mm
+        format: [58, 300]  // página térmica 58mm
     });
 
     let y = 8;
@@ -195,34 +199,43 @@ document.getElementById("btnPdf").addEventListener("click", () => {
         if (b.codigo) {
             pdf.setFont("helvetica","normal");
             pdf.setFontSize(9);
-            pdf.text(b.codigo, 29, y, { align: "center" });
-            y += 2; // pequeno espaçamento
+            pdf.text(b.codigo, margem + larguraUtil/2, y, { align: "center" });
+            y += 2;
         }
 
-        // 2️⃣ CÓDIGO DE BARRAS (CENTRALIZADO ABAIXO DO CÓDIGO)
+        // 2️⃣ CÓDIGO DE BARRAS CENTRALIZADO COM MARGEM
         if (b.img) {
-            pdf.addImage(b.img, "PNG", 4, y, 50, 14); // mais baixo e mais estreito
+            pdf.addImage(
+                b.img,
+                "PNG",
+                margem + (larguraUtil - 50) / 2, // centraliza dentro da área útil
+                y,
+                50,  // largura máxima segura
+                14   // menor altura
+            );
             y += 18;
         }
 
-        // 3️⃣ NOME DO PRODUTO (MÉDIO)
+        // 3️⃣ DESCRIÇÃO (MÉDIA)
         if (b.descricao) {
             pdf.setFontSize(11);
             pdf.setFont("helvetica", "normal");
-            const desc = pdf.splitTextToSize(b.descricao, 50);
-            pdf.text(desc, 29, y, { align: "center" });
-            y += desc.length * 5 + 4; // espaçamento menor
+
+            const linhas = pdf.splitTextToSize(b.descricao, larguraUtil);
+            pdf.text(linhas, margem + larguraUtil/2, y, { align:"center" });
+
+            y += linhas.length * 5 + 4;
         }
 
-        // 4️⃣ PREÇO (MESMO TAMANHO DO NOME + NEGRITO)
+        // 4️⃣ PREÇO (NEGRITO E MESMA FONTE DO NOME)
         if (b.preco) {
+            pdf.setFont("helvetica","bold");
             pdf.setFontSize(11);
-            pdf.setFont("helvetica", "bold");
-            pdf.text(b.preco, 29, y, { align:"center" });
-            y += 12; // espaçamento mais curto
+            pdf.text(b.preco, margem + larguraUtil/2, y, { align:"center" });
+            y += 12;
         }
 
-        // Quebra de página
+        // Caso ultrapasse o limite da página
         if (y > 280) {
             pdf.addPage([58,300]);
             y = 8;
@@ -231,6 +244,7 @@ document.getElementById("btnPdf").addEventListener("click", () => {
 
     pdf.save("etiquetas_58mm.pdf");
 });
+
 
 </script>
 
