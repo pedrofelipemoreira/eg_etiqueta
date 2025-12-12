@@ -1,252 +1,263 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
-<meta charset="UTF-8">
-<title>Gerador 58mm com Pré-visualização</title>
+    <meta charset="UTF-8">
+    <title>Gerador 58mm com Pré-visualização</title>
 
-<!-- PDF.js -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
-<!-- JsBarcode -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
+    <!-- JsBarcode -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
 
-<!-- jsPDF -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-<style>
-    body {
-        font-family: Arial;
-        background: #f2f2f2;
-        padding: 20px;
-    }
+    <style>
+        body {
+            font-family: Arial;
+            background: #f2f2f2;
+            padding: 20px;
+        }
 
-    #preview {
-        background: white;
-        margin-top: 25px;
-        padding: 10px;
-        width: 280px;  /* Simula impressora 58mm na tela */
-        border: 1px solid #aaa;
-        border-radius: 6px;
-    }
+        #preview {
+            background: white;
+            margin-top: 25px;
+            padding: 10px;
+            width: 280px;
+            /* Simula impressora 58mm na tela */
+            border: 1px solid #aaa;
+            border-radius: 6px;
+        }
 
-    .item {
-        text-align: center;
-        margin-bottom: 25px;
-        padding-bottom: 15px;
-        border-bottom: 1px dashed #888;
-    }
+        .item {
+            text-align: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px dashed #888;
+        }
 
-    .item img {
-        width: 240px;
-        display: block;
-        margin: 0 auto 5px auto;
-    }
+        .item img {
+            width: 240px;
+            display: block;
+            margin: 0 auto 5px auto;
+        }
 
-    .codigo {
-        font-size: 12px;
-        margin-bottom: 5px;
-    }
+        .codigo {
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
 
-    .descricao {
-        font-size: 14px;
-        margin-bottom: 8px;
-    }
+        .descricao {
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
 
-    .preco {
-        font-size: 18px;
-        font-weight: bold;
-        margin-bottom: 10px;
-    }
+        .preco {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
 
-    button {
-        margin-top: 20px;
-        padding: 10px 20px;
-    }
-</style>
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+        }
+    </style>
 
 </head>
+
 <body>
 
-<h2>Gerador de Etiquetas 58mm com Pré-visualização</h2>
+    <h2>Gerador de Etiquetas 58mm com Pré-visualização</h2>
 
-<input type="file" id="arquivo" accept="application/pdf">
+    <input type="file" id="arquivo" accept="application/pdf">
 
-<div id="preview"><em>Carregue um PDF para visualizar...</em></div>
+    <div id="preview"><em>Carregue um PDF para visualizar...</em></div>
 
-<button id="btnPdf" style="display:none;">Baixar PDF 58mm</button>
+    <button id="btnPdf" style="display:none;">Baixar PDF 58mm</button>
 
-<script>
-document.getElementById("arquivo").addEventListener("change", async function() {
+    <script>
+        document.getElementById("arquivo").addEventListener("change", async function () {
 
-    const file = this.files[0];
-    if (!file) return;
+            const file = this.files[0];
+            if (!file) return;
 
-    const buffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument(buffer).promise;
+            const buffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument(buffer).promise;
 
-    const preview = document.getElementById("preview");
-    preview.innerHTML = "";
-    const blocosFinais = [];
+            const preview = document.getElementById("preview");
+            preview.innerHTML = "";
+            const blocosFinais = [];
 
-    const regexCodigo = /\b\d{8,14}\b/g;
-    const regexPreco  = /(R\$\s*\d[\d\.,]*)/g;
+            const regexCodigo = /\b\d{8,14}\b/g;
+            const regexPreco = /(R\$\s*\d[\d\.,]*)/g;
 
-    for (let pg = 1; pg <= pdf.numPages; pg++) {
+            for (let pg = 1; pg <= pdf.numPages; pg++) {
 
-        const page = await pdf.getPage(pg);
-        const content = await page.getTextContent();
-        let text = content.items.map(i => i.str).join(" ");
+                const page = await pdf.getPage(pg);
+                const content = await page.getTextContent();
+                let text = content.items.map(i => i.str).join(" ");
 
-        // Regras de quebra
-        text = text.replace(regexCodigo, m => m + "\n");
-        text = text.replace(/(.*?)\s+(?=R\$)/g, (m, g1) => g1 + "\n");
-        text = text.replace(regexPreco, m => m + "\n\n");
+                // Regras de quebra
+                text = text.replace(regexCodigo, m => m + "\n");
+                text = text.replace(/(.*?)\s+(?=R\$)/g, (m, g1) => g1 + "\n");
+                text = text.replace(regexPreco, m => m + "\n\n");
 
-        const linhas = text.split("\n").map(l => l.trim()).filter(l => l !== "");
+                const linhas = text.split("\n").map(l => l.trim()).filter(l => l !== "");
 
-        for (let linha of linhas) {
+                for (let linha of linhas) {
 
-            let bloco = { codigo: null, descricao: null, preco: null, img: null };
+                    let bloco = { codigo: null, descricao: null, preco: null, img: null };
 
-            if (regexCodigo.test(linha)) {
+                    if (regexCodigo.test(linha)) {
 
-                bloco.codigo = linha;
+                        bloco.codigo = linha;
 
-                // Gerar código de barras como imagem
-                const canvas = document.createElement("canvas");
+                        // Gerar código de barras como imagem
+                        const canvas = document.createElement("canvas");
 
-                if (/^\d{13}$/.test(linha)) {
-                    JsBarcode(canvas, linha, { format:"EAN13", width:2, height:60, displayValue:false });
-                } else {
-                    JsBarcode(canvas, linha, { format:"CODE128", width:2, height:60, displayValue:false });
+                        if (/^\d{13}$/.test(linha)) {
+                            JsBarcode(canvas, linha, { format: "EAN13", width: 2, height: 60, displayValue: false });
+                        } else {
+                            JsBarcode(canvas, linha, { format: "CODE128", width: 2, height: 60, displayValue: false });
+                        }
+
+                        bloco.img = canvas.toDataURL("image/png");
+                    }
+                    else if (linha.startsWith("R$")) {
+                        bloco.preco = linha;
+                    }
+                    else {
+                        bloco.descricao = linha;
+                    }
+
+                    blocosFinais.push(bloco);
+                }
+            }
+
+            window.ETIQUETAS = blocosFinais;
+
+            // ----------- PREVIEW NA TELA --------------
+            preview.innerHTML = "";
+
+            let itemDiv = null;
+
+            blocosFinais.forEach(b => {
+                if (b.codigo) {
+                    itemDiv = document.createElement("div");
+                    itemDiv.className = "item";
+
+                    const img = document.createElement("img");
+                    img.src = b.img;
+                    itemDiv.appendChild(img);
+
+                    const cod = document.createElement("div");
+                    cod.className = "codigo";
+                    cod.textContent = b.codigo;
+                    itemDiv.appendChild(cod);
+
+                    preview.appendChild(itemDiv);
+                }
+                else if (b.descricao) {
+                    const desc = document.createElement("div");
+                    desc.className = "descricao";
+                    desc.textContent = b.descricao;
+                    itemDiv.appendChild(desc);
+                }
+                else if (b.preco) {
+                    const price = document.createElement("div");
+                    price.className = "preco";
+                    price.textContent = b.preco;
+                    itemDiv.appendChild(price);
+                }
+            });
+
+            document.getElementById("btnPdf").style.display = "inline-block";
+        });
+
+
+        // -------------------- EXPORTAR PDF 58mm -------------------------
+
+        document.getElementById("btnPdf").addEventListener("click", () => {
+
+            const { jsPDF } = window.jspdf;
+
+            const margem = 8;       // margem lateral
+            const larguraUtil = 58 - (margem * 2); // área imprimível segura
+
+            let pdf = new jsPDF({
+                unit: "mm",
+                format: [58, 300]
+            });
+
+            let y = 6;
+            const dados = window.ETIQUETAS;
+
+            dados.forEach((b, index) => {
+
+                // 1️⃣ CÓDIGO NUMÉRICO
+                if (b.codigo) {
+                    pdf.setFont("helvetica", "bold");
+                    pdf.setFontSize(8);
+                    pdf.text(b.codigo, margem + larguraUtil / 2, y, { align: "center" });
+                    y += 3;
                 }
 
-                bloco.img = canvas.toDataURL("image/png");
-            }
-            else if (linha.startsWith("R$")) {
-                bloco.preco = linha;
-            }
-            else {
-                bloco.descricao = linha;
-            }
+                // 2️⃣ CÓDIGO DE BARRAS
+                if (b.img) {
+                    pdf.addImage(
+                        b.img,
+                        "PNG",
+                        margem + (larguraUtil - 50) / 2,
+                        y,
+                        50,
+                        12
+                    );
+                    y += 14;
+                }
 
-            blocosFinais.push(bloco);
-        }
-    }
+                // 3️⃣ DESCRIÇÃO (compacta)
+                if (b.descricao) {
+                    pdf.setFont("helvetica", "bold");
+                    pdf.setFontSize(7);
 
-    window.ETIQUETAS = blocosFinais;
+                    const linhas = pdf.splitTextToSize(b.descricao, larguraUtil);
+                    pdf.text(linhas, margem + larguraUtil / 2, y, { align: "center" });
 
-    // ----------- PREVIEW NA TELA --------------
-    preview.innerHTML = "";
+                    y += linhas.length * 4;
+                }
 
-    let itemDiv = null;
+                // 4️⃣ PREÇO
+                if (b.preco) {
+                    pdf.setFont("helvetica", "bold");
+                    pdf.setFontSize(9);
+                    pdf.text(b.preco, margem + larguraUtil / 2, y, { align: "center" });
+                    y += 8;
 
-    blocosFinais.forEach(b => {
-        if (b.codigo) {
-            itemDiv = document.createElement("div");
-            itemDiv.className = "item";
-
-            const img = document.createElement("img");
-            img.src = b.img;
-            itemDiv.appendChild(img);
-
-            const cod = document.createElement("div");
-            cod.className = "codigo";
-            cod.textContent = b.codigo;
-            itemDiv.appendChild(cod);
-
-            preview.appendChild(itemDiv);
-        }
-        else if (b.descricao) {
-            const desc = document.createElement("div");
-            desc.className = "descricao";
-            desc.textContent = b.descricao;
-            itemDiv.appendChild(desc);
-        }
-        else if (b.preco) {
-            const price = document.createElement("div");
-            price.className = "preco";
-            price.textContent = b.preco;
-            itemDiv.appendChild(price);
-        }
-    });
-
-    document.getElementById("btnPdf").style.display = "inline-block";
-});
+                    // 5️⃣ LINHA — SOMENTE DEPOIS DO PREÇO
+                    pdf.setLineWidth(0.2);
+                    pdf.line(margem, y, margem + larguraUtil, y);
+                    y += 4; // pequeno espaço após a linha
+                }
 
 
-// -------------------- EXPORTAR PDF 58mm -------------------------
+                // quebras de página
+                if (y > 275) {
+                    pdf.addPage([58, 300]);
+                    y = 6;
+                }
+            });
 
-document.getElementById("btnPdf").addEventListener("click", () => {
-
-    const { jsPDF } = window.jspdf;
-
-    // Largura total 58mm → mas vamos usar apenas 50mm de área útil
-    const margem = 8;   // margem esquerda e direita
-    const larguraUtil = 58 - (margem * 2);  // 50mm de área segura
-
-    let pdf = new jsPDF({
-        unit: "mm",
-        format: [58, 300]  // página térmica 58mm
-    });
-
-    let y = 8;
-    const dados = window.ETIQUETAS;
-
-    dados.forEach(b => {
-
-        // 1️⃣ CÓDIGO NUMÉRICO (MENOR)
-        if (b.codigo) {
-            pdf.setFont("helvetica","normal");
-            pdf.setFontSize(9);
-            pdf.text(b.codigo, margem + larguraUtil/2, y, { align: "center" });
-            y += 2;
-        }
-
-        // 2️⃣ CÓDIGO DE BARRAS CENTRALIZADO COM MARGEM
-        if (b.img) {
-            pdf.addImage(
-                b.img,
-                "PNG",
-                margem + (larguraUtil - 50) / 2, // centraliza dentro da área útil
-                y,
-                50,  // largura máxima segura
-                14   // menor altura
-            );
-            y += 18;
-        }
-
-        // 3️⃣ DESCRIÇÃO (MÉDIA)
-        if (b.descricao) {
-            pdf.setFontSize(11);
-            pdf.setFont("helvetica", "normal");
-
-            const linhas = pdf.splitTextToSize(b.descricao, larguraUtil);
-            pdf.text(linhas, margem + larguraUtil/2, y, { align:"center" });
-
-            y += linhas.length * 5 + 4;
-        }
-
-        // 4️⃣ PREÇO (NEGRITO E MESMA FONTE DO NOME)
-        if (b.preco) {
-            pdf.setFont("helvetica","bold");
-            pdf.setFontSize(11);
-            pdf.text(b.preco, margem + larguraUtil/2, y, { align:"center" });
-            y += 12;
-        }
-
-        // Caso ultrapasse o limite da página
-        if (y > 280) {
-            pdf.addPage([58,300]);
-            y = 8;
-        }
-    });
-
-    pdf.save("etiquetas_58mm.pdf");
-});
+            pdf.save("etiquetas_58mm.pdf");
+        });
 
 
-</script>
+
+
+    </script>
 
 </body>
+
 </html>
